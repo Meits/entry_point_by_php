@@ -16,11 +16,11 @@ class Index_Controller extends AbstractController
 {
     public function indexAction() {
 
-        $testObj = new User();
+        /*$testObj = new User();
         $testObj->name = "asdasd";
         $testObj->email = "sdsadsadasdas";
         $testObj->pass = 1;
-        $testObj->save();
+        $testObj->save();*/
 
         $this->page = $this->view->render('index/index',['title' => "Hello world"]);
         return $this->output();
