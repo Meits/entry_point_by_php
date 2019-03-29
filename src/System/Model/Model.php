@@ -27,7 +27,7 @@ class Model
 
     public function __construct($id = null) {
 
-        $this->ins_db = DbDriver::get_instance()->getInsDb();
+        $this->ins_db = DbDriver::get_instance();
 
         if(!$this->table) {
             $this->table =  strtolower((new \ReflectionClass($this))->getShortName())."s";
@@ -276,7 +276,7 @@ class Model
                     }
 
 
-                    return $this->ins_db->insert_id;
+                    return $this->ins_db->getInsDb()->insert_id;
                     break;
                 default:
                     # code...

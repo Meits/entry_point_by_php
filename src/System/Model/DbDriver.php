@@ -9,7 +9,7 @@
 namespace App\System\Model;
 
 
-class DbDriver
+class DbDriver implements IDbDriver
 {
 
     private static $_instance;
@@ -45,6 +45,14 @@ class DbDriver
         catch(DbException $e) {
             exit();
         }
+    }
+
+    /**
+     * @return null
+     */
+    public function query($sql)
+    {
+        return $this->ins_db->query($sql);
     }
 
     /**

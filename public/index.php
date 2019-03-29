@@ -8,22 +8,15 @@
 
 //error_reporting(0);
 use App\System\App;
-use App\System\Exceptions\ControllerException;
-use App\System\Router;
-
-header("Content-Type:text/html;charset=utf-8");
 
 require "../vendor/autoload.php";
 require "../config/app.php";
-
-session_start();
-
 
 try{
     $obj = new App();
     $obj->run();
 }
-catch(ControllerException $e) {
+catch(\Exception $e) {
     echo $e->getMessage();
     return;
 }

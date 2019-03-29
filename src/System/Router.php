@@ -77,7 +77,7 @@ class Router
                 }
 
                 if(!$this->params = array_combine($key,$value)) {
-                    throw new ContrException("Не правильный адресс",$zapros);
+                    throw new \Exception("Не правильный адресс",$zapros);
                 }
             }
         }
@@ -85,7 +85,7 @@ class Router
             try{
                 throw new \Exception('<p style="color:red">Не правильный адресс сайта.</p>');
             }
-            catch(Exception $e) {
+            catch(\Exception $e) {
                 echo $e->getMessage();
                 exit();
             }
@@ -109,7 +109,7 @@ class Router
             }
 
         } else {
-            throw new ControllerException('Page Error');
+            throw new \Exception('Page Error');
         }
     }
 
