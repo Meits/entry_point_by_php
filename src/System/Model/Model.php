@@ -81,10 +81,10 @@ class Model
     public function where(  $field,  $operator = "",  $value = "")
     {
         if(func_num_args() == 2) {
-            $this->where[] = $field. " = ". $this->ins_db->real_escape_string($operator);
+            $this->where[] = $field. " = '". $this->ins_db->getInsDb()->real_escape_string($operator)."'";
         }
         else {
-            $this->where[] = $field. " ". $operator. " ". $this->ins_db->real_escape_string($value);
+            $this->where[] = $field. " ". $operator. " '". $this->ins_db->getInsDb()->real_escape_string($value)."'";
         }
 
         return $this;
@@ -141,7 +141,7 @@ class Model
 
                 $this->sql = "INSERT INTO ".$this->table;
 
-                $this->sql .= " (". implode(",",$keys).") ";
+                $this->sql .= " (". implode(", ",$keys).") ";
 
                 $this->sql .= "VALUES (";
 
@@ -149,7 +149,7 @@ class Model
                     $this->sql .= "'".$val."'".",";
                 }
 
-                $this->sql = rtrim($this->sql,',').")";
+                $this->sql = rtrim($this->sql,', ').")";
 
                 $this->typeSql = "insert";
                 return $this->execute();
@@ -244,7 +244,7 @@ class Model
                     $result = $this->ins_db->query($this->sql);
 
                     if(!$result) {
-                        throw new DbException("Ошибка запроса".$this->ins_db->connect_errno."|".$this->ins_db->connect_error);
+                        throw new \Exception("Error " . $this->sql);
                     }
 
                     if($result->num_rows == 0) {
@@ -262,7 +262,7 @@ class Model
                     $result = $this->ins_db->query($this->sql);
 
                     if(!$result) {
-                        throw new DbException("Ошибка запроса".$this->ins_db->connect_errno."|".$this->ins_db->connect_error);
+                        throw new \Exception("Error " . $this->sql);
                     }
                     return true;
                     break;
@@ -271,7 +271,7 @@ class Model
                     $result = $this->ins_db->query($this->sql);
 
                     if(!$result) {
-                        throw new \Exception("Ошибка базы данных: ".$this->ins_db->errno." | ".$this->ins_db->error);
+                        throw new \Exception("Error: ".  $this->sql);
                         return FALSE;
                     }
 

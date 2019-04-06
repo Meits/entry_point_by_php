@@ -11,6 +11,6 @@ define('SITE_URL','/');
 define('TEMPLATE','resources/views');
 
 define('HOST','localhost');
-define('USER','homestead');
-define('PASSWORD','secret');
+define('USER','root');
+define('PASSWORD','');
 define('DB_NAME','phpentry');
