@@ -1,15 +1,13 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Meits
- * Date: 28-Mar-19
- * Time: 13:56
- */
+
+declare(strict_types=1);
 
 namespace App\System\View;
 
-
 interface IView
 {
-    public function render(string $path, array $param = array()) : string;
+    /**
+     * @param array<string, mixed> $param variables exposed to the template
+     */
+    public function render(string $path, array $param = []): string;
 }

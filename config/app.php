@@ -1,16 +1,12 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Meits
- * Date: 28-Mar-19
- * Time: 10:22
- */
 
-define('BASEPATH', dirname(__DIR__));
-define('SITE_URL','/');
-define('TEMPLATE','resources/views');
+declare(strict_types=1);
 
-define('HOST','localhost');
-define('USER','root');
-define('PASSWORD','');
-define('DB_NAME','phpentry');
+return [
+    'app' => [
+        'base_path' => dirname(__DIR__),
+        'site_url' => '/',
+        'template_path' => 'resources/views',
+        'debug' => env('APP_DEBUG', false),
+    ],
+];

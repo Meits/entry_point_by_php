@@ -1,38 +1,21 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Meits
- * Date: 28-Mar-19
- * Time: 11:29
- */
+
+declare(strict_types=1);
 
 namespace App\System\Controller;
 
+use App\System\View\IView;
 
-use App\System\View\View;
-
-class AbstractController
+abstract class AbstractController
 {
-    protected $view;
-    protected $page;
+    protected string $page = '';
 
-    /**
-     * AbstractController constructor.
-     * @param $view
-     */
-    public function __construct()
+    public function __construct(protected readonly IView $view)
     {
-        $this->view = new View(BASEPATH, TEMPLATE);
     }
 
-    public function get_page()
+    protected function output(): void
     {
         echo $this->page;
     }
-
-    protected function output()
-    {
-        return $this->get_page();
-    }
-
 }

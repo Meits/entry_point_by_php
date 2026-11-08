@@ -1,31 +1,17 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Meits
- * Date: 28-Mar-19
- * Time: 15:35
- */
+
+declare(strict_types=1);
 
 namespace App\System;
 
-
-use App\System\Model\DbDriver;
-
-class App
+final class App
 {
+    public function __construct(private readonly Router $router)
+    {
+    }
 
-    private $router;
-    private $dbDriver;
-    /**
-     *
-     */
-    public function run() {
-
-        $this->dbDriver = DbDriver::get_instance();
-        $this->dbDriver->setConnection(HOST, USER, PASSWORD, DB_NAME);
-
-
-        $this->router = new Router();
+    public function run(): void
+    {
         $this->router->processRequest();
     }
 }

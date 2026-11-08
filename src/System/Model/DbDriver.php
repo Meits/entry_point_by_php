@@ -1,65 +1,58 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Meits
- * Date: 28-Mar-19
- * Time: 14:39
- */
+
+declare(strict_types=1);
 
 namespace App\System\Model;
 
-
-class DbDriver implements IDbDriver
+/**
+ * Thin PDO wrapper. Always talks to the database through prepared
+ * statements with bound parameters — never through string-built SQL.
+ */
+final class DbDriver implements DbDriverInterface
 {
+    private \PDO $pdo;
 
-    private static $_instance;
-    private $ins_db = null;
+    public function __construct(
+        string $host,
+        int $port,
+        string $database,
+        string $user,
+        string $pass,
+    ) {
+        $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $host, $port, $database);
 
-    public static function get_instance() {
-
-        if(self::$_instance instanceof static) {
-            return self::$_instance;
-        }
-
-        return self::$_instance = new static();
-    }
-
-    private function __construct()
-    {
-    }
-
-    /**
-     * DbDriver constructor.
-     */
-    public function setConnection($host, $user, $pass, $dbname)
-    {
-        try {
-            $this->ins_db = new \mysqli($host, $user, $pass, $dbname);
-
-            if($this->ins_db->connect_error) {
-                throw new DbException("Ошибка соединения : ".$this->ins_db->connect_errno."|".iconv("CP1251","UTF-8",$this->ins_db->connect_error));
-            }
-
-            $this->ins_db->query("SET NAMES 'UTF8'");
-        }
-        catch(DbException $e) {
-            exit();
-        }
+        $this->pdo = new \PDO($dsn, $user, $pass, [
+            \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+            \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+            \PDO::ATTR_EMULATE_PREPARES => false,
+        ]);
     }
 
     /**
-     * @return null
+     * Wrap an already-configured PDO connection (e.g. an in-memory SQLite
+     * connection in tests) instead of opening a new MySQL connection.
      */
-    public function query($sql)
+    public static function fromPdo(\PDO $pdo): self
     {
-        return $this->ins_db->query($sql);
+        $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        $pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
+
+        $driver = (new \ReflectionClass(self::class))->newInstanceWithoutConstructor();
+        $driver->pdo = $pdo;
+
+        return $driver;
     }
 
-    /**
-     * @return null
-     */
-    public function getInsDb()
+    public function query(string $sql, array $params = []): \PDOStatement
     {
-        return $this->ins_db;
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute($params);
+
+        return $statement;
+    }
+
+    public function lastInsertId(): string
+    {
+        return $this->pdo->lastInsertId();
     }
 }

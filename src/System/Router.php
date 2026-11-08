@@ -1,127 +1,118 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Meits
- * Date: 28-Mar-19
- * Time: 09:56
- */
+
 declare(strict_types=1);
 
 namespace App\System;
 
+use App\System\Exceptions\RouteNotFoundException;
+use Psr\Container\ContainerInterface;
 
-use App\System\Exceptions\ControllerException;
-
-class Router
+/**
+ * Maps a request URL onto a `{Segment}_Controller::{segment}Action()` call,
+ * e.g. `/blog/show/id/42` -> `BlogController::showAction(['id' => '42'])`.
+ *
+ * Controllers are resolved through the DI container (not raw
+ * `new $class()`) so their own constructor dependencies get autowired.
+ */
+final class Router
 {
-    private $request_url;
+    private const SEGMENT_PATTERN = '/^[A-Za-z][A-Za-z0-9]*$/';
 
-    private $controller;
+    private readonly string $controllerClass;
+    private readonly string $actionMethod;
 
-    private $action;
+    /** @var array<string, string> */
+    private readonly array $params;
 
-    private $params;
+    public function __construct(
+        private readonly ContainerInterface $container,
+        string $siteUrl = '/',
+        private readonly string $controllerNamespace = 'App\\Controller\\',
+        ?string $requestUri = null,
+        ?string $scriptName = null,
+    ) {
+        $requestUri ??= $_SERVER['REQUEST_URI'] ?? '/';
+        $scriptName ??= $_SERVER['PHP_SELF'] ?? '/index.php';
 
-    static $_instance;
+        $basePath = substr($scriptName, 0, (int) strpos($scriptName, 'index.php'));
 
-    static function get_instance() {
-
-        if(self::$_instance instanceof self) {
-            return self::$_instance;
+        if ($basePath !== $siteUrl) {
+            throw new RouteNotFoundException(sprintf('Unexpected site base path "%s", expected "%s".', $basePath, $siteUrl));
         }
 
-        return self::$_instance = new self;
+        $path = strtok(substr($requestUri, strlen($siteUrl)), '?') ?: '';
+        $segments = array_values(array_filter(explode('/', rtrim($path, '/')), static fn (string $s) => $s !== ''));
+
+        $this->controllerClass = $this->resolveControllerClass($segments[0] ?? null);
+        $this->actionMethod = $this->resolveActionMethod($segments[1] ?? null);
+        $this->params = $this->pairParams(array_slice($segments, 2));
     }
 
-    public function __construct() {
-
-        $zapros = $_SERVER['REQUEST_URI'];
-
-        $path = substr($_SERVER['PHP_SELF'],0,strpos($_SERVER['PHP_SELF'],'index.php'));
-
-        if($path === SITE_URL) {
-            $this->request_url = substr($zapros,strlen(SITE_URL));
-
-            $url = explode('/',rtrim($this->request_url,'/'));
-
-            $this->controller .= "App\\Controller\\";
-            if (!empty($url[0])) {
-                $this->controller .= ucfirst($url[0]).'_Controller';
-            }
-            else {
-                $this->controller .= "Index_Controller";
-            }
-
-            if (!empty($url[1])) {
-                $this->action .= ucfirst($url[1]).'Action';
-            }
-            else {
-                $this->action .= "indexAction";
-            }
-
-            if(!empty($url[2])) {
-
-                $count = count($url);
-
-                $key = array();
-                $value = array();
-
-                for($i = 2;$i < $count; $i++) {
-
-                    if($i%2 == 0) {
-                        $key[] = $url[$i];
-                    }
-                    else {
-                        $value[] = $url[$i];
-                    }
-                }
-
-                if(!$this->params = array_combine($key,$value)) {
-                    throw new \Exception("Не правильный адресс",$zapros);
-                }
-            }
-        }
-        else {
-            try{
-                throw new \Exception('<p style="color:red">Не правильный адресс сайта.</p>');
-            }
-            catch(\Exception $e) {
-                echo $e->getMessage();
-                exit();
-            }
-        }
-
-    }
-
-    public function processRequest()
+    public function processRequest(): void
     {
-        if (class_exists($this->controller)) {
-
-            $ref = new \ReflectionClass($this->controller);
-
-            if ($ref->hasMethod($this->action)) {
-
-                if ($ref->isInstantiable()) {
-                    $class = $ref->newInstance();
-                    $method = $ref->getMethod($this->action);
-                    $method->invoke($class, $this->get_params());
-                }
-            }
-
-        } else {
-            throw new \Exception('Page Error');
+        if (!class_exists($this->controllerClass) || !method_exists($this->controllerClass, $this->actionMethod)) {
+            throw new RouteNotFoundException(sprintf('No route matches %s::%s().', $this->controllerClass, $this->actionMethod));
         }
+
+        $controller = $this->container->get($this->controllerClass);
+        $controller->{$this->actionMethod}($this->params);
     }
 
-
-
-    public function get_controller()
+    public function getControllerClass(): string
     {
-        return $this->controller;
+        return $this->controllerClass;
     }
 
-    public function get_params()
+    public function getActionMethod(): string
+    {
+        return $this->actionMethod;
+    }
+
+    /** @return array<string, string> */
+    public function getParams(): array
     {
         return $this->params;
+    }
+
+    private function resolveControllerClass(?string $segment): string
+    {
+        $name = $this->validateSegment($segment, 'index');
+
+        return sprintf('%s%s_Controller', $this->controllerNamespace, ucfirst($name));
+    }
+
+    private function resolveActionMethod(?string $segment): string
+    {
+        return lcfirst($this->validateSegment($segment, 'index')) . 'Action';
+    }
+
+    private function validateSegment(?string $segment, string $default): string
+    {
+        $name = $segment !== null && $segment !== '' ? $segment : $default;
+
+        if (!preg_match(self::SEGMENT_PATTERN, $name)) {
+            throw new RouteNotFoundException(sprintf('Invalid URL segment "%s".', $segment ?? ''));
+        }
+
+        return $name;
+    }
+
+    /**
+     * @param list<string> $segments
+     * @return array<string, string>
+     */
+    private function pairParams(array $segments): array
+    {
+        if (count($segments) % 2 !== 0) {
+            throw new RouteNotFoundException('URL parameters must come in key/value pairs.');
+        }
+
+        $params = [];
+
+        foreach (array_chunk($segments, 2) as [$key, $value]) {
+            $params[$key] = $value;
+        }
+
+        return $params;
     }
 }
